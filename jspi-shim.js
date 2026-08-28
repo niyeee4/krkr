@@ -11,7 +11,13 @@
     Memory: W.WebAssembly && W.WebAssembly.Memory
   };
 
-  var hasNativeJspi = !!(REAL.Suspending && REAL.promising && REAL.Instance && REAL.instantiate);
+  var isWebKitOrIOS = (typeof navigator !== 'undefined') && (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
+    (/Safari/.test(navigator.userAgent) && !/Chrome|Chromium|Edg|OPR|Brave/.test(navigator.userAgent))
+  );
+
+  var hasNativeJspi = !isWebKitOrIOS && !!(REAL.Suspending && REAL.promising && REAL.Instance && REAL.instantiate);
   W.__jspiHasNative = hasNativeJspi;
 
   if (hasNativeJspi) {
