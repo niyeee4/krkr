@@ -1,0 +1,866 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset=utf-8>
+<script>
+(function() {
+  if (typeof window !== 'undefined' && window.crossOriginIsolated === false && 'serviceWorker' in navigator) {
+    var hasReloaded = sessionStorage.getItem('krkr2_coi_reloaded');
+    if (!hasReloaded) {
+      navigator.serviceWorker.register('./sw.js', { scope: './' }).then(function(reg) {
+        function reloadOnce() {
+          sessionStorage.setItem('krkr2_coi_reloaded', '1');
+          window.location.reload();
+        }
+        if (reg.active && !navigator.serviceWorker.controller) {
+          reloadOnce();
+        } else {
+          navigator.serviceWorker.addEventListener('controllerchange', function() {
+            reloadOnce();
+          }, { once: true });
+          if (reg.installing) {
+            reg.installing.addEventListener('statechange', function() {
+              if (this.state === 'activated' && !navigator.serviceWorker.controller) {
+                reloadOnce();
+              }
+            });
+          }
+        }
+      }).catch(function(err) {
+        console.warn('[COI] ServiceWorker registration:', err);
+      });
+    } else {
+      sessionStorage.removeItem('krkr2_coi_reloaded');
+    }
+  }
+})();
+</script>
+<meta content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" name="viewport"><meta content="Kirikiroid2 Web — Run Kirikiri2 visual novels directly in your browser. Load .xp3 game files or folders, no installation required. Supports save/load, WebGL rendering, and mobile devices." name="description"><meta content="Kirikiroid2, Kirikiri2, KirikiriZ, KrKr2, KrKrZ, visual novel, browser, WebAssembly, xp3, galgame" name="keywords"><link href=https://krkr2.fenghengzhi.com/ rel=canonical><meta content="Kirikiroid2 Web — Browser-based Kirikiri2 Engine" property="og:title"><meta content="Run Kirikiri2 visual novels directly in your browser. Load .xp3 game files, no installation required." property="og:description"><meta content=website property=og:type><meta content=https://krkr2.fenghengzhi.com/ property=og:url><meta content="Kirikiroid2 Web" property="og:site_name"><meta content=summary name=twitter:card><meta content="Kirikiroid2 Web — Browser-based Kirikiri2 Engine" name=twitter:title><meta content="Run Kirikiri2 visual novels directly in your browser. Load .xp3 game files, no installation required." name=twitter:description><title>Kirikiroid2 Web — Browser-based Kirikiri2 Visual Novel Engine</title><meta name="theme-color" content="#0d0b1a">
+<script type=application/ld+json>{
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Kirikiroid2 Web",
+      "alternateName": ["KrKr2 Web", "吉里吉里2 Web"],
+      "url": "https://krkr2.fenghengzhi.com/",
+      "applicationCategory": "GameApplication",
+      "operatingSystem": "Any (WebAssembly)",
+      "browserRequirements": "Requires WebAssembly and WebGL",
+      "description": "Browser port of Kirikiroid2, the Android port of the Kirikiri2 visual novel engine. Run .xp3 game archives directly in your browser via WebAssembly, with persistent saves and no installation required.",
+      "inLanguage": ["en", "zh", "ja"],
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "author": {
+        "@type": "Person",
+        "name": "fenghengzhi",
+        "url": "https://github.com/fenghengzhi"
+      }
+    }</script>
+<script src="https://www.googletagmanager.com/gtag/js?id=G-X4FRTWKHGR" async></script>
+<script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("js",new Date),gtag("config","G-X4FRTWKHGR")</script>
+<link href=manifest.webmanifest rel=manifest><meta content=yes name=mobile-web-app-capable><meta content=yes name=apple-mobile-web-app-capable><meta content=black-translucent name=apple-mobile-web-app-status-bar-style><meta content="Kirikiroid2 Web" name=apple-mobile-web-app-title><link href=pwa/icon-192.png rel=apple-touch-icon>
+<script>!function(){try{var e=new URLSearchParams(window.location.search);if((e.get("xp3")||e.get("game"))&&document.documentElement.classList.add("krkr2-autoload"),"1"===e.get("debugEarlyLogs")){var r=[];window.__krkr2EarlyLogs=r,["log","warn","error"].forEach((function(e){var t=console[e];console[e]=function(){return function(e,t){var a="["+e+"] "+Array.prototype.map.call(t,(function(e){if("string"==typeof e)return e;try{return JSON.stringify(e)}catch(r){return String(e)}})).join(" ");r.push(a),r.length>5e3&&r.shift();try{sessionStorage.setItem("__krkr2EarlyLogs",JSON.stringify(r))}catch(e){}}(e,arguments),t.apply(this,arguments)}}))}var t=(e.get("renderer")||"").trim().toLowerCase(),a="opengl"===t;if(e.has("webglPreserveDrawingBuffer")){var n=(e.get("webglPreserveDrawingBuffer")||"").trim().toLowerCase();a="1"===n||"true"===n}var o="opengl"!==t&&null;if(e.has("webglAlpha")){var l=(e.get("webglAlpha")||"").trim().toLowerCase();o=!("0"===l||"false"===l)}if(a||null!==o){var s=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(e,r){return!this||"canvas"!==this.id||"webgl"!==e&&"webgl2"!==e&&"experimental-webgl"!==e||((r=Object.assign({},r||{})).preserveDrawingBuffer=a,null!==o&&(r.alpha=o),console.warn("[webgl] context attrs override",e,r)),s.call(this,e,r)}}}catch(e){}}()</script>
+<style>
+:root {
+  /* Material 3 dark theme tokens */
+  --md-primary: #d0bcff;
+  --md-on-primary: #381e72;
+  --md-primary-container: #4f378b;
+  --md-on-primary-container: #eaddff;
+  --md-secondary-container: #4a4458;
+  --md-on-secondary-container: #e8def8;
+  --md-surface: #141218;
+  --md-surface-container-lowest: #0f0d13;
+  --md-surface-container-low: #1d1b20;
+  --md-surface-container: #211f26;
+  --md-surface-container-high: #2b2930;
+  --md-surface-container-highest: #36343b;
+  --md-on-surface: #e6e0e9;
+  --md-on-surface-variant: #cac4d0;
+  --md-outline: #938f99;
+  --md-outline-variant: #49454f;
+  --md-error: #f2b8b5;
+  --md-on-error: #601410;
+  --md-error-container: #8c1d18;
+  --md-on-error-container: #f9dedc;
+  --md-success: #a8f0b8;
+  --md-shadow-1: 0 1px 2px rgba(0,0,0,.3), 0 1px 3px 1px rgba(0,0,0,.15);
+  --md-shadow-2: 0 1px 2px rgba(0,0,0,.3), 0 2px 6px 2px rgba(0,0,0,.15);
+  --md-shadow-3: 0 4px 8px 3px rgba(0,0,0,.15), 0 1px 3px rgba(0,0,0,.3);
+  --md-shape-xs: 8px;
+  --md-shape-s: 12px;
+  --md-shape-m: 16px;
+  --md-shape-l: 20px;
+  --md-shape-xl: 28px;
+  --md-shape-full: 9999px;
+  --md-font: Roboto, system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --md-bg: radial-gradient(900px 600px at 85% -10%, rgba(208, 188, 255, 0.07), transparent 60%), radial-gradient(800px 600px at -10% 110%, rgba(168, 240, 184, 0.05), transparent 55%), var(--md-surface);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: var(--md-font);
+  background: var(--md-bg);
+  color: var(--md-on-surface);
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+}
+#container { position: fixed; inset: 0; background: #000; }
+#canvas { width: 100%; height: 100%; display: block; }
+
+/* ---------- overlays ---------- */
+#loading, #error-overlay, #file-picker, #save-space-picker, #xp3-selector {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  display: none; align-items: center; justify-content: center;
+  padding: 16px; z-index: 20;
+}
+#loading { z-index: 40; background: var(--md-bg); flex-direction: column; text-align: center; padding: 24px; }
+#loading.hidden { display: none; }
+#loading .app-logo { font-size: 40px; margin-bottom: 16px; }
+#loading h1 { font-size: 24px; font-weight: 500; letter-spacing: 0; margin-bottom: 8px; color: var(--md-on-surface); }
+#loading .subtitle { margin-bottom: 32px; }
+#progress-bar {
+  width: min(320px, 82vw); height: 4px;
+  background: var(--md-surface-container-highest);
+  border-radius: var(--md-shape-full); overflow: hidden; margin-bottom: 16px;
+}
+#progress-fill { width: 0%; height: 100%; background: var(--md-primary); border-radius: var(--md-shape-full); transition: width 0.25s ease-out; }
+#status { font-size: 14px; color: var(--md-on-surface-variant); min-height: 20px; }
+
+#error-overlay { z-index: 50; background: rgba(0, 0, 0, 0.55); }
+#error-overlay.visible { display: flex; }
+#error-box {
+  background: var(--md-surface-container-high); border-radius: var(--md-shape-xl);
+  box-shadow: var(--md-shadow-3); padding: 32px 28px; max-width: 460px; width: 100%;
+  text-align: center;
+}
+#error-box h2 { font-size: 20px; font-weight: 500; margin-bottom: 12px; color: var(--md-error); }
+#error-message { font-size: 14px; line-height: 1.6; color: var(--md-on-surface-variant); white-space: pre-line; margin-bottom: 20px; }
+#error-update-btn {
+  display: block; margin: 0 auto; min-height: 44px; padding: 12px 24px;
+  border: none; border-radius: var(--md-shape-l);
+  background: var(--md-error-container); color: var(--md-on-error-container);
+  font-family: var(--md-font); font-size: 14px; font-weight: 500; cursor: pointer;
+  transition: filter 0.15s;
+}
+#error-update-btn:hover { filter: brightness(1.1); }
+
+/* ---------- main picker ---------- */
+#file-picker { overflow-y: auto; z-index: 20; }
+#file-picker.visible { display: flex; }
+html.krkr2-autoload #file-picker { display: none; }
+#picker-box {
+  width: min(560px, 100%);
+  background: var(--md-surface-container-low);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-shape-xl);
+  box-shadow: var(--md-shadow-2);
+  padding: 32px 28px 24px;
+  margin: auto;
+}
+.app-header { text-align: center; margin-bottom: 24px; }
+#picker-box h1 { font-size: 22px; font-weight: 500; color: var(--md-on-surface); margin-bottom: 6px; }
+.subtitle { font-size: 13px; color: var(--md-on-surface-variant); line-height: 1.5; }
+
+/* sections */
+.section-card {
+  background: var(--md-surface-container);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-shape-l);
+  padding: 16px 16px 18px;
+}
+.section-card + .section-card { margin-top: 12px; }
+.section-title {
+  font-size: 12px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--md-primary); margin-bottom: 12px;
+}
+.section-note { font-size: 12px; color: var(--md-on-surface-variant); margin-bottom: 12px; line-height: 1.5; }
+
+
+
+
+
+
+
+
+
+.picker-buttons { display: flex; flex-wrap: wrap; gap: 10px; }
+.picker-buttons button {
+  flex: 1 1 0; min-width: 140px; min-height: 44px; padding: 11px 16px;
+  border: 1px solid var(--md-outline); border-radius: var(--md-shape-l);
+  background: var(--md-surface-container-high); color: var(--md-on-surface);
+  font-family: var(--md-font); font-size: 14px; font-weight: 500; cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+.picker-buttons button:hover { background: var(--md-secondary-container); color: var(--md-on-secondary-container); border-color: var(--md-outline); }
+.picker-buttons button:active { transform: scale(0.98); }
+.picker-buttons button.primary { background: var(--md-primary); color: var(--md-on-primary); border: none; }
+.picker-buttons button.primary:hover { background: var(--md-primary); filter: brightness(1.12); }
+.picker-divider { width: 100%; text-align: center; color: var(--md-on-surface-variant); font-size: 12px; margin: 4px 0 2px; }
+
+#picker-status {
+  margin-top: 16px; font-size: 13px; font-weight: 500;
+  color: var(--md-on-surface-variant); min-height: 18px; text-align: center;
+}
+#picker-status.error { color: var(--md-error); }
+#picker-progress {
+  width: 100%; height: 4px; background: var(--md-surface-container-highest);
+  border-radius: var(--md-shape-full); overflow: hidden; margin-top: 14px; display: none;
+}
+#picker-progress.visible { display: block; }
+#picker-progress-fill { width: 0%; height: 100%; background: var(--md-primary); border-radius: var(--md-shape-full); transition: width 0.2s ease-out; }
+#engine-status { margin-top: 12px; font-size: 13px; color: var(--md-on-surface-variant); min-height: 18px; text-align: center; }
+
+.feedback-link {
+  margin-top: 18px; font-size: 12px; color: var(--md-on-surface-variant);
+  display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; align-items: center;
+}
+.feedback-link a { color: var(--md-primary); text-decoration: none; cursor: pointer; }
+.feedback-link a:hover { text-decoration: underline; }
+.about-content {
+  margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--md-outline-variant);
+  font-size: 12px; color: var(--md-on-surface-variant); line-height: 1.6;
+}
+.about-content a { color: var(--md-primary); text-decoration: none; }
+.about-content a:hover { text-decoration: underline; }
+
+/* ---------- save space dialog ---------- */
+#save-space-picker { z-index: 30; background: rgba(0, 0, 0, 0.55); overflow-y: auto; }
+#save-space-picker.visible { display: flex; }
+#space-box {
+  background: var(--md-surface-container-high); border-radius: var(--md-shape-xl);
+  box-shadow: var(--md-shadow-3); padding: 28px 24px; max-width: 520px; width: 100%;
+  text-align: center; margin: auto;
+}
+#space-box h1 { font-size: 19px; font-weight: 500; margin-bottom: 4px; }
+#space-list { display: flex; flex-direction: column; gap: 8px; margin: 18px 0; max-height: 42vh; overflow-y: auto; }
+.space-item {
+  display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+  background: var(--md-surface-container); border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-shape-m); transition: border-color 0.15s, background 0.15s;
+}
+.space-item:hover { border-color: var(--md-primary); background: var(--md-secondary-container); }
+.space-item .space-info { flex: 1; text-align: left; cursor: pointer; }
+.space-item .space-name { font-weight: 500; font-size: 14px; }
+.space-item .space-meta { font-size: 12px; color: var(--md-on-surface-variant); margin-top: 2px; }
+.space-item button {
+  min-height: 36px; padding: 6px 14px; border: 1px solid var(--md-outline);
+  border-radius: var(--md-shape-l); background: transparent; color: var(--md-on-surface);
+  font-family: var(--md-font); font-size: 12px; font-weight: 500; cursor: pointer;
+}
+.space-item button:hover { background: var(--md-secondary-container); }
+.space-item button.delete-btn:hover { background: var(--md-error-container); color: var(--md-on-error-container); border-color: transparent; }
+#space-create { display: flex; gap: 8px; margin-bottom: 12px; }
+#space-name-input {
+  flex: 1; min-width: 0; height: 44px; padding: 0 14px;
+  border: 1px solid var(--md-outline); border-radius: var(--md-shape-m);
+  background: var(--md-surface-container-highest); color: var(--md-on-surface);
+  font-family: var(--md-font); font-size: 13px; outline: none;
+}
+#space-name-input:focus { border-color: var(--md-primary); }
+#space-create-btn {
+  height: 44px; padding: 0 18px; border: none; border-radius: var(--md-shape-l);
+  background: var(--md-primary); color: var(--md-on-primary);
+  font-family: var(--md-font); font-size: 13px; font-weight: 500; cursor: pointer;
+}
+#space-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+#space-actions button {
+  min-height: 40px; padding: 9px 18px; border: 1px solid var(--md-outline);
+  border-radius: var(--md-shape-l); background: transparent; color: var(--md-on-surface);
+  font-family: var(--md-font); font-size: 13px; font-weight: 500; cursor: pointer;
+}
+#space-actions button:hover { background: var(--md-secondary-container); }
+#space-status { margin-top: 12px; font-size: 12px; color: var(--md-on-surface-variant); min-height: 16px; }
+
+/* ---------- xp3 selector dialog ---------- */
+#xp3-selector { z-index: 30; background: rgba(0, 0, 0, 0.55); overflow-y: auto; }
+#xp3-selector.visible { display: flex; }
+#selector-box {
+  background: var(--md-surface-container-high); border-radius: var(--md-shape-xl);
+  box-shadow: var(--md-shadow-3); padding: 28px 22px; max-width: 500px; width: 100%;
+  text-align: center; margin: auto;
+}
+#selector-box h2 { font-size: 18px; font-weight: 500; margin-bottom: 4px; }
+#xp3-list { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; max-height: 55vh; overflow-y: auto; }
+.xp3-item {
+  display: block; width: 100%; text-align: left; padding: 14px 16px;
+  background: var(--md-surface-container); color: var(--md-on-surface);
+  border: 1px solid var(--md-outline-variant); border-radius: var(--md-shape-m);
+  cursor: pointer; font-family: var(--md-font); font-size: 14px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.xp3-item:hover { border-color: var(--md-primary); background: var(--md-secondary-container); }
+.xp3-item .xp3-name { font-weight: 500; }
+.xp3-item .xp3-dir { font-size: 12px; color: var(--md-on-surface-variant); margin-top: 2px; }
+
+/* ---------- fullscreen button ---------- */
+#fullscreen-btn {
+  position: fixed; right: max(18px, env(safe-area-inset-right)); bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 30; width: 48px; height: 48px; border-radius: 50%;
+  border: 1px solid var(--md-outline-variant);
+  background: var(--md-surface-container-high); color: var(--md-on-surface); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: var(--md-shadow-2); transition: opacity 0.4s, background 0.2s;
+}
+#fullscreen-btn:hover { background: var(--md-secondary-container); }
+#fullscreen-btn svg { width: 20px; height: 20px; }
+#fullscreen-btn .fs-icon-exit { display: none; }
+#fullscreen-btn.is-fullscreen .fs-icon-enter { display: none; }
+#fullscreen-btn.is-fullscreen .fs-icon-exit { display: block; }
+#fullscreen-btn.idle { opacity: 0; pointer-events: none; }
+@media (display-mode: standalone) { #fullscreen-btn { display: none !important; } }
+body.ios-fake-fullscreen { position: fixed !important; width: 100vw !important; height: 100vh !important; height: 100dvh !important; overflow: hidden !important; }
+body.ios-fake-fullscreen #container { position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; }
+
+/* ---------- responsive / mobile ---------- */
+@media (max-width: 560px) {
+  #picker-box { padding: 24px 16px 18px; border-radius: var(--md-shape-l); }
+  .picker-buttons button { min-width: 100%; }
+}
+@media (min-height: 0px) {
+  #file-picker { padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); }
+}
+</style>
+</head>
+<body>
+<noscript><style>#file-picker{display:none!important}body,html{overflow:auto!important}</style><div style="padding:40px 20px;text-align:center;color:#e0e0e0;background:#0d0b1a;min-height:100vh;max-width:720px;margin:0 auto;line-height:1.7"><h1 style="color:#8b6dff;margin-bottom:16px">Kirikiroid2 Web</h1><p style="margin-bottom:12px">This application requires JavaScript and WebAssembly to run. Please enable JavaScript and reload the page.</p><p><a href=https://github.com/fenghengzhi/krkr2 style=color:#8b6dff>Source code on GitHub</a></p></div></noscript>
+<div id=loading data-nosnippet class=hidden><div class=app-logo>🎮</div><h1>Kirikiroid2 Web</h1><p class=subtitle>Preparing engine…</p><div id=progress-bar><div id=progress-fill></div></div><div id=status>Loading...</div></div>
+<div id=error-overlay data-nosnippet><div id=error-box><h2>Error</h2><p id=error-message></p><button id=error-update-btn>Force Update &amp; Reload</button></div></div>
+<div id=container><canvas id=canvas oncontextmenu=event.preventDefault() tabindex=-1></canvas></div>
+<button id="fullscreen-btn" aria-label="Toggle Fullscreen" title="Toggle Fullscreen">
+  <svg class="fs-icon-enter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+  </svg>
+  <svg class="fs-icon-exit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 14h6m0 0v6m0-6L3 21m17-7h-6m0 0v6m0-6l7 7M4 10h6m0 0V4m0 6L3 3m17 7h-6m0 0V4m0 6l7-7"/>
+  </svg>
+</button>
+<div id=save-space-picker data-nosnippet><div id=space-box><h1>Save Spaces</h1><p class=subtitle>Select or create a save space to persist your game data</p><div id=space-list></div><div id=space-create><input id=space-name-input placeholder="New space name..."> <button id=space-create-btn>Create</button></div><div id=space-actions><button id=space-import-btn>Import ZIP</button> <button id=space-skip-btn>Skip (no saving)</button></div><div id=space-status></div></div></div>
+<input id=space-import-input style=display:none type=file accept=.zip>
+<div id=file-picker class=visible><div id=picker-box><div class=app-header><h1>Kirikiroid2 Web</h1><p class=subtitle>Run Kirikiri2 visual novels in your browser — no installation required</p></div><section class=section-card style=margin-top:12px><p class=section-title>Select game file</p><p class=section-note>Pick a game from your device. .zip packages are extracted automatically.</p><div class=picker-buttons><button id=pick-zip-btn class=primary>Select .zip</button> <button id=pick-file-btn>Select .xp3 / .exe</button> <button id=pick-dir-btn>Upload Folder</button><div id=picker-divider class=picker-divider style=display:none>or load a copy into memory</div><button id=pick-dir-api-btn style=display:none class=primary>Open Game Directory</button></div></section><div id=picker-status data-nosnippet aria-live=polite></div><div id=picker-progress><div id=picker-progress-fill></div></div><div id=engine-status data-nosnippet aria-live=polite></div><div class=feedback-link><a href=https://github.com/niyeee4/kirikiroid2-web/issues rel=noopener target=_blank>Feedback &amp; Issues</a> · <a href=# id=force-update-btn title="Clear cached app files and reload the latest version (save data is kept)">Force Update</a> · <a href=# id=save-space-link title="Manage save spaces">Save Spaces</a> · <span id=build-version></span></div><section class=about-content><p><strong>Open source:</strong> Kirikiroid2 Web is open source. The full source code, build instructions, and issue tracker are on GitHub: <a href=https://github.com/fenghengzhi/krkr2 rel=noopener target=_blank>github.com/fenghengzhi/krkr2</a>.</p></section></div></div><div id=xp3-selector data-nosnippet><div id=selector-box><h2>Select Game Entry Point</h2><p class=subtitle>Multiple launch options found. Choose one to start:</p><div id=xp3-list></div></div></div>
+<input id=file-input style=display:none type=file accept=".xp3,.exe,application/x-msdownload,application/octet-stream"> <input id=dir-input style=display:none type=file webkitdirectory> <input id=zip-input style=display:none type=file accept=.zip,application/zip,application/x-zip-compressed>
+<script src=https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js crossorigin=anonymous></script>
+<script src="vlfs.js?v=opfs-zip-cache-v3"></script>
+<script>!function(){var e=/uniform\s+(?!highp\s|mediump\s|lowp\s)(mat[234]|vec[234]|float|int)\s/g;function n(n,r){return r.replace(e,"uniform highp $1 ")}var r=WebGLRenderingContext.prototype,t=r.shaderSource;if(r.shaderSource=function(e,r){return t.call(this,e,n(0,r))},"undefined"!=typeof WebGL2RenderingContext){var o=WebGL2RenderingContext.prototype,i=o.shaderSource;o.shaderSource=function(e,r){return i.call(this,e,n(0,r))}}}()</script>
+<script src="jspi-shim.js?v=3"></script>
+<script>var statusElement=document.getElementById("status"),progressFill=document.getElementById("progress-fill"),loadingOverlay=document.getElementById("loading"),filePicker=document.getElementById("file-picker"),pickerStatus=document.getElementById("picker-status"),pickerProgress=document.getElementById("picker-progress"),pickerProgressFill=document.getElementById("picker-progress-fill"),engineStatusElement=document.getElementById("engine-status");function setEngineStatus(e){engineStatusElement.textContent=e}var resolveEngineSingleton,gameFileReady=!1,userFileDepAdded=!1,hasFileSystemAPI="function"==typeof window.showDirectoryPicker,engineSingletonReady=new Promise((function(e){resolveEngineSingleton=e}));if(navigator.locks&&"function"==typeof navigator.locks.request){var _lockAcquired=!1;navigator.locks.request("krkr2-web-engine-instance",{mode:"exclusive"},(function(e){return _lockAcquired=!0,resolveEngineSingleton(!0),new Promise((function(){}))})).catch((function(e){console.warn("[singleton] Web Lock notice:",e),resolveEngineSingleton(!0)})),setTimeout((function(){_lockAcquired||resolveEngineSingleton(!0)}),500)}else resolveEngineSingleton(!0);var BUILD_VERSION="20260828000000";function forceUpdate(){var e=Promise.resolve();"serviceWorker"in navigator&&(e=e.then((function(){return navigator.serviceWorker.getRegistrations().then((function(e){return Promise.all(e.map((function(e){return e.unregister()})))}))}))),"caches"in window&&(e=e.then((function(){return caches.keys().then((function(e){return Promise.all(e.map((function(e){return caches.delete(e)})))}))}))),e.catch((function(e){console.warn("[PWA] force update cleanup failed:",e)})).then((function(){window.location.reload()}))}BUILD_VERSION&&"@"!==BUILD_VERSION.charAt(0)||(BUILD_VERSION="dev"),document.getElementById("build-version").textContent="Build "+BUILD_VERSION,document.getElementById("force-update-btn").addEventListener("click",(function(e){e.preventDefault(),confirm("Clear cached app files and reload the latest version?\nSave data will be kept.")&&forceUpdate()})),document.getElementById("error-update-btn").addEventListener("click",(function(){forceUpdate()}));var wasmSupported=typeof WebAssembly!=="undefined"&&typeof WebAssembly.Memory==="function";if(!wasmSupported){document.querySelector("#error-box h2").textContent="WebAssembly Not Supported";document.getElementById("error-message").textContent="当前浏览器不支持 WebAssembly，无法运行游戏引擎。
+This browser does not support WebAssembly required by the engine.";document.getElementById("error-update-btn").style.display="none";document.getElementById("error-overlay").classList.add("visible");}var hostDirHandle=null,vlfsReady=engineSingletonReady.then((function(){return VLFS.init()})).catch((function(e){console.error("[vlfs] init failed:",e)}));VLFS.onWriteClose=function(e,t){if(t.length<=8388608&&"undefined"!=typeof FS)try{writeFileToFS(e,t)}catch(e){}var n=e.startsWith("/savedata/")||e.startsWith("/save/")||e.indexOf("/savedata/")>=0;if(Module._hostDirHandle){var r=Module._hostDirHandle,a=Module._hostDirPrefix,i=t.slice();setTimeout((async function(){try{var t=e;a&&t.startsWith(a+"/")&&(t=t.substring(a.length));for(var n=t.split("/").filter(Boolean),o=n.pop(),s=r,l=0;l<n.length;l++)s=await s.getDirectoryHandle(n[l],{create:!0});var c=await s.getFileHandle(o,{create:!0}),d=await c.createWritable();await d.write(i),await d.close()}catch(t){console.warn("[vlfs] FSA write-back FAILED: "+e+" - "+t.message)}}),0)}else Module._saveSpaceId&&n&&idbSaveFile(e,t)},function(){var e=window.alert,t=window.confirm;window.alert=function(t){return console.warn("[alert]",t),e.call(window,t)},window.confirm=function(e){console.warn("[confirm]",e);var n=t.call(window,e);return console.warn("[confirm result]",n),n}}();var assetsLoaded=async function(){await vlfsReady;var e=await fetch("assets.zip");if(!e.ok)throw new Error("assets.zip HTTP "+e.status);var t=await e.blob(),n=await VLFS.registerZipBlob(t,{stripPrefix:""});console.log("[vlfs] assets.zip registered: "+n.paths.length+" entries")}().catch((function(e){console.error("[vlfs] assets.zip load failed:",e)})),preallocWasmMemory=null;(function(){if(typeof WebAssembly==="undefined"||typeof WebAssembly.Memory!=="function")return;var tiers=[2048,1536,1024,768,512,384,256];for(var i=0;i<tiers.length;i++){try{preallocWasmMemory=new WebAssembly.Memory({initial:1024,maximum:16*tiers[i],shared:!0});if(i>0){console.warn("[mem] shared memory maximum fallback to "+tiers[i]+"MB");}break;}catch(e){}}if(!preallocWasmMemory){var isIso=typeof window!=="undefined"&&window.crossOriginIsolated;var msg=isIso?"无法分配引擎所需的共享内存，请关闭其他标签页/应用后刷新重试。
+Failed to allocate WebAssembly shared memory. Close other tabs/apps and reload.":"当前环境未启用 Cross-Origin Isolation，无法创建共享内存。请确保允许 Service Worker 并刷新重试。
+Cross-Origin Isolation is not active. Please ensure Service Worker is enabled and reload.";document.querySelector("#error-box h2").textContent="Memory Allocation Failed";document.getElementById("error-message").textContent=msg;document.getElementById("error-overlay").classList.add("visible");}})();var mainScriptUrl=new URL("index.js",window.location.href).href;var Module={mainScriptUrlOrBlob:mainScriptUrl,locateFile:function(e,t){return e.endsWith(".wasm")?new URL(window.__jspiHasNative?"index.wasm":"index-asyncify.wasm",window.location.href).href:t+e},wasmMemory:preallocWasmMemory||void 0,preRun:[function(){FS.mkdir("/savedata"),applyRendererPreferenceFromUrl(),Module.addRunDependency("engine-singleton"),engineSingletonReady.finally((function(){Module.removeRunDependency("engine-singleton")})),Module.addRunDependency("user-file"),userFileDepAdded=!0,gameFileReady&&Module.removeRunDependency("user-file"),Module.addRunDependency("vlfs-assets"),assetsLoaded.finally((function(){Module.removeRunDependency("vlfs-assets")}))}],postRun:[function(){loadingOverlay.classList.add("hidden")}],print:function(e){console.log(e)},printErr:function(e){console.error(e)},canvas:function(){var e=document.getElementById("canvas");return e.addEventListener("webglcontextlost",(function(e){alert("WebGL context lost. Please reload the page."),e.preventDefault()}),!1),e}(),setStatus:function(e){if(!e)return loadingOverlay.classList.add("hidden"),void(gameFileReady||xp3Url||gameZipUrl||showFilePicker());var t=e.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);if(t){var n=parseInt(t[2])/parseInt(t[4])*100;progressFill.style.width=n+"%",statusElement.textContent=t[1].trim(),gameFileReady||setEngineStatus(t[1].trim()+" "+Math.round(n)+"%")}else statusElement.textContent=e,gameFileReady||setEngineStatus(e)},onAbort:function(e){document.querySelector("#error-box h2").textContent="Error";document.getElementById("error-message").textContent="The application has aborted. "+e;document.getElementById("error-overlay").classList.add("visible");},monitorRunDependencies:function(e){0===e?Module.setStatus(""):gameFileReady?Module.setStatus("Starting... ("+e+" remaining)"):userFileDepAdded&&1===e?setEngineStatus("Engine ready"):Module.setStatus("Preparing engine... ("+e+" remaining)")}};Module.setStatus("Downloading engine..."),window.onerror=function(e){Module.setStatus("Error: see console")},function(){var e=document.getElementById("canvas"),t=document.getElementById("container");function n(){var n=window.devicePixelRatio||1,r=Math.round(t.clientWidth)||1280,a=Math.round(t.clientHeight)||720,i=Math.round(r*n),o=Math.round(a*n);e.width===i&&e.height===o||(e.width=i,e.height=o)}if(n(),new ResizeObserver(n).observe(t),window.addEventListener("resize",n),window.matchMedia){var r=window.matchMedia("(resolution: "+window.devicePixelRatio+"dppx)");r.addEventListener&&r.addEventListener("change",n)}}();var searchUrlParams=new URLSearchParams(window.location.search),urlParams=searchUrlParams,xp3Url=urlParams.get("xp3"),gameZipUrl=urlParams.get("game"),entryXp3=urlParams.get("entry"),rendererUrlParam=normalizeRendererUrlParam(urlParams.get("renderer")),localZipPickerEnabled=urlParams.has("pickZip");function normalizeRendererUrlParam(e){return null===e?"":"software"===(e=String(e).trim().toLowerCase())||"opengl"===e?e:(console.warn("[renderer] Ignoring unsupported URL renderer:",e),"")}function rendererPreferenceXml(e,t){var n=null;if(e)try{!(n=(new DOMParser).parseFromString(e,"application/xml")).getElementsByTagName("parsererror").length&&n.documentElement&&"GlobalPreference"===n.documentElement.tagName||(n=null)}catch(e){n=null}n||(n=document.implementation.createDocument("","GlobalPreference",null));for(var r=n.documentElement,a=r.getElementsByTagName("Item"),i=null,o=0;o<a.length;o++)if("renderer"===a[o].getAttribute("key")){i=a[o];break}return i||((i=n.createElement("Item")).setAttribute("key","renderer"),r.appendChild(i)),i.setAttribute("value",t),(new XMLSerializer).serializeToString(n)}function applyRendererPreferenceFromUrl(){if(rendererUrlParam&&"undefined"!=typeof FS)try{ensureDir("/save");var e="/save/GlobalPreference.xml",t="";try{t=FS.readFile(e,{encoding:"utf8"})}catch(e){}var n=rendererPreferenceXml(t,rendererUrlParam);FS.writeFile(e,n,{encoding:"utf8"}),VLFS.registerOverlayFile(e,(new TextEncoder).encode(n)),console.log("[renderer] URL override applied:",rendererUrlParam)}catch(e){console.warn("[renderer] Failed to apply URL renderer override:",e)}}localZipPickerEnabled&&(document.getElementById("pick-zip-btn").style.display=""),hasFileSystemAPI&&(document.getElementById("pick-dir-api-btn").style.display="",document.getElementById("picker-divider").style.display="");var IDB_PREFIX="krkr2-space-",currentIdb=null;function idbOpen(e){return new Promise((function(t,n){var r=indexedDB.open(IDB_PREFIX+e,1);r.onupgradeneeded=function(e){e.target.result.createObjectStore("files")},r.onsuccess=function(e){currentIdb=e.target.result,t(currentIdb)},r.onerror=function(){n(r.error)}}))}function idbSaveFile(e,t){if(currentIdb)try{currentIdb.transaction("files","readwrite").objectStore("files").put(new Uint8Array(t),e)}catch(t){console.warn("[IDB] save failed:",e,t)}}function idbLoadAll(){return currentIdb?new Promise((function(e){var t=currentIdb.transaction("files","readonly").objectStore("files"),n=[],r=t.openCursor();r.onsuccess=function(t){var r=t.target.result;r?(n.push({path:r.key,data:r.value}),r.continue()):e(n)},r.onerror=function(){e(n)}})):Promise.resolve([])}function idbListSpaces(){if(indexedDB.databases)return indexedDB.databases().then((function(e){return e.filter((function(e){return e.name&&e.name.startsWith(IDB_PREFIX)})).map((function(e){return e.name.substring(IDB_PREFIX.length)}))}));var e=localStorage.getItem("krkr2-spaces");return Promise.resolve(e?JSON.parse(e):[])}function idbRegisterSpace(e){try{var t=JSON.parse(localStorage.getItem("krkr2-spaces")||"[]");t.indexOf(e)<0&&(t.push(e),localStorage.setItem("krkr2-spaces",JSON.stringify(t)))}catch(e){}}function idbUnregisterSpace(e){try{var t=JSON.parse(localStorage.getItem("krkr2-spaces")||"[]");t=t.filter((function(t){return t!==e})),localStorage.setItem("krkr2-spaces",JSON.stringify(t))}catch(e){}}function idbDeleteSpace(e){return new Promise((function(t){var n=indexedDB.deleteDatabase(IDB_PREFIX+e);n.onsuccess=function(){idbUnregisterSpace(e),t()},n.onerror=function(){t()}}))}function idbGetSpaceInfo(e){return new Promise((function(t){var n=indexedDB.open(IDB_PREFIX+e,1);n.onupgradeneeded=function(e){e.target.result.createObjectStore("files")},n.onsuccess=function(e){var n=e.target.result;try{var r=n.transaction("files","readonly").objectStore("files"),a=0,i=0,o=r.openCursor();o.onsuccess=function(e){var r=e.target.result;r?(a++,i+=r.value.byteLength||0,r.continue()):(n.close(),t({count:a,size:i}))},o.onerror=function(){n.close(),t({count:0,size:0})}}catch(e){n.close(),t({count:0,size:0})}},n.onerror=function(){t({count:0,size:0})}}))}async function idbRestoreSaves(){var e=await idbLoadAll();if(0!==e.length){await waitForFS();for(var t=0;t<e.length;t++)writeFileToFS(e[t].path,e[t].data),VLFS.registerOverlayFile(e[t].path,new Uint8Array(e[t].data));console.log("[IDB] Restored "+e.length+" save file(s)")}}async function idbExportZip(e){var t=await new Promise((function(t,n){var r=indexedDB.open(IDB_PREFIX+e,1);r.onupgradeneeded=function(e){e.target.result.createObjectStore("files")},r.onsuccess=function(e){t(e.target.result)},r.onerror=function(){n(r.error)}})),n=await new Promise((function(e){var n=t.transaction("files","readonly"),r=[],a=n.objectStore("files").openCursor();a.onsuccess=function(t){var n=t.target.result;n?(r.push({path:n.key,data:n.value}),n.continue()):e(r)},a.onerror=function(){e(r)}}));t.close();for(var r=new JSZip,a=0;a<n.length;a++)r.file(n[a].path.replace(/^\//,""),n[a].data);var i=await r.generateAsync({type:"blob"}),o=document.createElement("a");o.href=URL.createObjectURL(i),o.download=e+"-saves.zip",o.click(),URL.revokeObjectURL(o.href)}async function idbImportZip(e){var t=await JSZip.loadAsync(e),n=e.name.replace(/\.zip$/i,"").replace(/-saves$/,"");await idbOpen(n),idbRegisterSpace(n);var r=[];t.forEach((function(e,t){t.dir||r.push({path:e,entry:t})}));for(var a=0;a<r.length;a++){var i=await r[a].entry.async("uint8array");idbSaveFile("/"+r[a].path,i)}return currentIdb&&(currentIdb.close(),currentIdb=null),n}var saveSpacePicker=document.getElementById("save-space-picker"),spaceStatus=document.getElementById("space-status");function formatSize(e){return e<1024?e+" B":e<1048576?(e/1024).toFixed(1)+" KB":(e/1048576).toFixed(1)+" MB"}async function refreshSpaceList(){var e=document.getElementById("space-list");e.innerHTML="",spaceStatus.textContent="Loading...";var t=await idbListSpaces();if(spaceStatus.textContent="",0!==t.length)for(var n=0;n<t.length;n++)!function(t){var n=document.createElement("div");n.className="space-item";var r=document.createElement("div");r.className="space-info",r.innerHTML='<div class="space-name">'+t+'</div><div class="space-meta">Loading...</div>',r.addEventListener("click",(function(){selectSpace(t)}));var a=document.createElement("button");a.textContent="Export",a.addEventListener("click",(function(){spaceStatus.textContent="Exporting...",idbExportZip(t).then((function(){spaceStatus.textContent="Exported!"}))}));var i=document.createElement("button");i.className="delete-btn",i.textContent="Delete",i.addEventListener("click",(function(){confirm('Delete save space "'+t+'"? This cannot be undone.')&&idbDeleteSpace(t).then(refreshSpaceList)})),n.appendChild(r),n.appendChild(a),n.appendChild(i),e.appendChild(n),idbGetSpaceInfo(t).then((function(e){r.querySelector(".space-meta").textContent=e.count+" file(s), "+formatSize(e.size)}))}(t[n]);else e.innerHTML='<div style="color:#666;font-size:13px;padding:12px;">No save spaces yet. Create one below.</div>'}var spaceChosen=!1,pendingNonFsaAction=null;async function selectSpace(e){if(Module._saveSpaceId=e,localStorage.setItem("krkr2-last-space",e),await idbOpen(e),idbRegisterSpace(e),spaceChosen=!0,saveSpacePicker.classList.remove("visible"),filePicker.classList.add("visible"),pendingNonFsaAction){var t=pendingNonFsaAction;pendingNonFsaAction=null,t()}}function showFilePicker(){document.documentElement.classList.remove("krkr2-autoload"),filePicker.classList.add("visible")}function showSpacePicker(){refreshSpaceList(),saveSpacePicker.classList.add("visible")}function ensureSpaceThen(e){spaceChosen?e():(pendingNonFsaAction=e,filePicker.classList.remove("visible"),showSpacePicker())}function waitForFS(){return new Promise((function(e){if("undefined"==typeof FS)var t=setInterval((function(){"undefined"!=typeof FS&&(clearInterval(t),e())}),50);else e()}))}function ensureDir(e){for(var t=e.split("/").filter(Boolean),n="",r=0;r<t.length;r++){n+="/"+t[r];try{FS.mkdir(n)}catch(e){}}}function writeFileToFS(e,t){var n=e.substring(0,e.lastIndexOf("/"));n&&ensureDir(n),FS.writeFile(e,t)}function setPickerProgress(e,t){pickerProgress.classList.add("visible"),pickerProgressFill.style.width=e+"%",t&&(pickerStatus.textContent=t)}
+
+function findBestStartupEntry(paths, entryParam) {
+    if (!paths || paths.length === 0) return null;
+    function getFilename(p) { return p.substring(p.lastIndexOf("/") + 1); }
+
+    if (entryParam) {
+        var ep = entryParam.trim().toLowerCase();
+        var match = paths.find(function(p) {
+            var name = getFilename(p).toLowerCase();
+            return name === ep || p.toLowerCase() === ep || p.toLowerCase().endsWith("/" + ep);
+        });
+        if (match) return match;
+    }
+
+    var dataXp3 = paths.find(function(p) { return getFilename(p).toLowerCase() === "data.xp3"; });
+    if (dataXp3) return dataXp3;
+
+    var utilityRegex = /^(?:unins.*|uninstall.*|setup.*|config.*|dxwebsetup.*|vcredist.*|install.*|update.*)\.exe$/i;
+    var exeCandidates = paths.filter(function(p) {
+        var fn = getFilename(p);
+        return fn.toLowerCase().endsWith(".exe") && !utilityRegex.test(fn);
+    });
+
+    if (exeCandidates.length === 1) {
+        return exeCandidates[0];
+    } else if (exeCandidates.length > 1) {
+        var preferredExe = exeCandidates.find(function(p) {
+            var fn = getFilename(p).toLowerCase();
+            return fn === "game.exe" || fn === "tvpwin32.exe" || fn === "krkr.exe" || fn === "start.exe";
+        });
+        if (preferredExe) return preferredExe;
+        return exeCandidates;
+    }
+
+    var secondaryRegex = /^(?:patch\d*|voice\d*|bgm\d*|sound\d*|se\d*|video\d*|movie\d*|plugin\d*)\.xp3$/i;
+    var primaryXp3 = paths.filter(function(p) {
+        var fn = getFilename(p);
+        return fn.toLowerCase().endsWith(".xp3") && !secondaryRegex.test(fn);
+    });
+
+    if (primaryXp3.length === 1) {
+        return primaryXp3[0];
+    } else if (primaryXp3.length > 1) {
+        return primaryXp3;
+    }
+
+    var startupTjs = paths.find(function(p) { return getFilename(p).toLowerCase() === "startup.tjs"; });
+    if (startupTjs) {
+        var dir = startupTjs.substring(0, startupTjs.lastIndexOf("/")) || "/";
+        return dir;
+    }
+
+    var allLaunchable = paths.filter(function(p) {
+        var lower = getFilename(p).toLowerCase();
+        return lower.endsWith(".xp3") || lower.endsWith(".exe");
+    });
+
+    if (allLaunchable.length === 1) return allLaunchable[0];
+    if (allLaunchable.length > 1) return allLaunchable;
+
+    return paths[0] || null;
+}
+
+function showXp3Selector(candidates, baseDir, onSelect) {
+    var selectorOverlay = document.getElementById("xp3-selector");
+    var listElement = document.getElementById("xp3-list");
+    listElement.innerHTML = "";
+
+    var utilityRegex = /^(?:unins.*|uninstall.*|setup.*|config.*)\.exe$/i;
+    var secondaryRegex = /^(?:patch\d*|voice\d*|bgm\d*|sound\d*|se\d*|video\d*|movie\d*)\.xp3$/i;
+
+    var sorted = candidates.slice().sort(function(a, b) {
+        var fnA = a.substring(a.lastIndexOf("/") + 1).toLowerCase();
+        var fnB = b.substring(b.lastIndexOf("/") + 1).toLowerCase();
+        var scoreA = fnA === "data.xp3" ? 0 : fnA.endsWith(".exe") && !utilityRegex.test(fnA) ? 1 : fnA.endsWith(".xp3") && !secondaryRegex.test(fnA) ? 2 : 3;
+        var scoreB = fnB === "data.xp3" ? 0 : fnB.endsWith(".exe") && !utilityRegex.test(fnB) ? 1 : fnB.endsWith(".xp3") && !secondaryRegex.test(fnB) ? 2 : 3;
+        if (scoreA !== scoreB) return scoreA - scoreB;
+        return fnA.localeCompare(fnB);
+    });
+
+    for (var i = 0; i < sorted.length; i++) {
+        (function(path) {
+            var name = path.substring(path.lastIndexOf("/") + 1);
+            var dir = path.substring(0, path.lastIndexOf("/"));
+            var relDir = baseDir && dir.startsWith(baseDir) ? dir.substring(baseDir.length) : dir;
+            var lowerName = name.toLowerCase();
+
+            var badge = "";
+            if (lowerName.endsWith(".exe")) {
+                badge = '<span style="font-size:11px;background:rgba(208,188,255,0.18);color:#d0bcff;padding:2px 8px;border-radius:12px;margin-left:8px;font-weight:500;">Executable</span>';
+            } else if (lowerName === "data.xp3") {
+                badge = '<span style="font-size:11px;background:rgba(103,80,164,0.3);color:#e8def8;padding:2px 8px;border-radius:12px;margin-left:8px;font-weight:500;">Main Archive</span>';
+            } else if (secondaryRegex.test(lowerName)) {
+                badge = '<span style="font-size:11px;background:rgba(255,255,255,0.08);color:#cac4d0;padding:2px 8px;border-radius:12px;margin-left:8px;font-weight:400;">Patch/Data</span>';
+            }
+
+            var icon = lowerName.endsWith(".exe") ? "🎮 " : "📦 ";
+            var btn = document.createElement("button");
+            btn.className = "xp3-item";
+            btn.innerHTML = '<div class="xp3-name" style="display:flex;align-items:center;">' + icon + name + badge + '</div>' + (relDir ? '<div class="xp3-dir">' + relDir + '</div>' : '');
+            btn.addEventListener("click", function() {
+                selectorOverlay.classList.remove("visible");
+                onSelect(path);
+            });
+            listElement.appendChild(btn);
+        })(sorted[i]);
+    }
+    filePicker.classList.remove("visible");
+    pickerProgress.classList.remove("visible");
+    selectorOverlay.classList.add("visible");
+}
+
+function checkAndStartGame(candidates, baseDir) {
+    var entry = findBestStartupEntry(candidates, entryXp3);
+    if (typeof entry === "string") {
+        Module._startupXp3Path = entry;
+        startGame();
+    } else if (Array.isArray(entry) && entry.length > 1) {
+        showXp3Selector(entry, baseDir, function(selected) {
+            Module._startupXp3Path = selected;
+            startGame();
+        });
+    } else {
+        if (Array.isArray(candidates) && candidates.length > 0) {
+            Module._startupXp3Path = candidates[0];
+        }
+        startGame();
+    }
+}
+
+function startGame() {
+    function unblock() { userFileDepAdded && Module.removeRunDependency("user-file"); }
+    gameFileReady = true;
+    filePicker.classList.remove("visible");
+    loadingOverlay.classList.remove("hidden");
+    statusElement.textContent = "Starting game...";
+    progressFill.style.width = "100%";
+    Module._saveSpaceId ? (statusElement.textContent = "Restoring saves...", idbRestoreSaves().then(function() {
+        applyRendererPreferenceFromUrl();
+        unblock();
+    }).catch(function(err) {
+        console.warn("[IDB] Failed to restore saves:", err);
+        applyRendererPreferenceFromUrl();
+        unblock();
+    })) : (applyRendererPreferenceFromUrl(), unblock());
+}
+
+async function fetchBlobWithProgress(url, onProgress) {
+    var resp = await fetch(url);
+    if (!resp.ok) throw new Error("HTTP " + resp.status + " " + resp.statusText);
+    var total = parseInt(resp.headers.get("Content-Length") || "0", 10);
+    if (!resp.body) return await resp.blob();
+    for (var reader = resp.body.getReader(), chunks = [], blobs = [], loaded = 0, currentChunk = 0;;) {
+        var chunk = await reader.read();
+        if (chunk.done) break;
+        chunks.push(chunk.value);
+        loaded += chunk.value.length;
+        currentChunk += chunk.value.length;
+        onProgress && onProgress(loaded, total);
+        if (loaded >= 67108864) {
+            blobs.push(new Blob(chunks));
+            chunks = [];
+            loaded = 0;
+        }
+    }
+    chunks.length && blobs.push(new Blob(chunks));
+    return new Blob(blobs);
+}
+
+async function fetchXp3FromUrl(url) {
+    loadingOverlay.classList.remove("hidden");
+    statusElement.textContent = "Probing game data...";
+    progressFill.style.width = "0%";
+    try {
+        await vlfsReady;
+        var filename = url.substring(url.lastIndexOf("/") + 1).split("?")[0] || "data.xp3";
+        var filePath = "/" + filename;
+        var isRangeSupported = false;
+        var contentLength = -1;
+        try {
+            var head = await fetch(url, { method: "HEAD" });
+            if (head.ok) {
+                isRangeSupported = "bytes" === (head.headers.get("Accept-Ranges") || "").toLowerCase();
+                contentLength = parseInt(head.headers.get("Content-Length") || "-1", 10);
+            }
+        } catch (e) {}
+
+        if (isRangeSupported && contentLength > 0) {
+            VLFS.registerRemote(filePath, url, contentLength, true);
+            console.log("[vlfs] remote file (Range): " + url + " as " + filePath + ", " + contentLength + " bytes");
+        } else {
+            statusElement.textContent = "Downloading game data...";
+            var blob = await fetchBlobWithProgress(url, function(curr, total) {
+                if (total > 0) {
+                    var pct = Math.round((curr / total) * 100);
+                    progressFill.style.width = pct + "%";
+                    statusElement.textContent = "Downloading... " + pct + "%";
+                } else {
+                    statusElement.textContent = "Downloading... " + (curr / 1048576).toFixed(1) + " MB";
+                }
+            });
+            VLFS.registerBlobFile(filePath, blob);
+            console.log("[vlfs] remote file (whole blob): " + filePath + " (" + blob.size + " bytes)");
+        }
+        Module._startupXp3Path = filePath;
+        startGame();
+    } catch (e) {
+        console.error("fetchXp3FromUrl error:", e);
+        reportLoadError(e);
+    }
+}
+
+async function fetchAndExtractZip(url, entryParam) {
+    loadingOverlay.classList.remove("hidden");
+    statusElement.textContent = "Probing game archive...";
+    progressFill.style.width = "0%";
+    try {
+        await vlfsReady;
+        var res;
+        var isRangeSupported = false;
+        var contentLength = -1;
+        var fingerprint = "";
+        try {
+            var head = await fetch(url, { method: "HEAD" });
+            if (head.ok) {
+                isRangeSupported = "bytes" === (head.headers.get("Accept-Ranges") || "").toLowerCase();
+                contentLength = parseInt(head.headers.get("Content-Length") || "-1", 10);
+                var sha = (head.headers.get("X-Content-SHA256") || "").trim().toLowerCase();
+                if (/^[0-9a-f]{64}$/.test(sha)) fingerprint = "sha256-" + sha;
+            }
+        } catch (e) {}
+
+        if (isRangeSupported && contentLength > 0) {
+            statusElement.textContent = "Reading archive index...";
+            res = await VLFS.registerZipRemote(url, contentLength, {
+                fingerprint: fingerprint || void 0,
+                onProgress: function(curr, total, name) {
+                    progressFill.style.width = Math.round((curr / total) * 100) + "%";
+                    statusElement.textContent = "Extracting (" + curr + "/" + total + ") " + name.substring(1);
+                }
+            });
+            console.log("[vlfs] remote zip (Range): " + url + ", " + contentLength + " bytes");
+        } else {
+            statusElement.textContent = "Downloading game archive...";
+            var blob = await fetchBlobWithProgress(url, function(curr, total) {
+                if (total > 0) {
+                    var pct = Math.round((curr / total) * 100);
+                    progressFill.style.width = (0.6 * pct) + "%";
+                    statusElement.textContent = "Downloading... " + pct + "% (" + (curr / 1048576).toFixed(1) + " MB)";
+                } else {
+                    statusElement.textContent = "Downloading... " + (curr / 1048576).toFixed(1) + " MB";
+                }
+            });
+            statusElement.textContent = "Extracting archive...";
+            progressFill.style.width = "60%";
+            res = await VLFS.registerZipBlob(blob, {
+                onProgress: function(curr, total, name) {
+                    progressFill.style.width = (60 + Math.round((curr / total) * 40)) + "%";
+                    statusElement.textContent = "Extracting (" + curr + "/" + total + ") " + name.substring(1);
+                }
+            });
+            console.log("[vlfs] zip blob fallback: " + blob.size + " bytes");
+        }
+
+        console.log("[vlfs] zip registered: " + res.paths.length + " entries");
+        progressFill.style.width = "100%";
+        statusElement.textContent = "Starting game...";
+
+        var entry = findBestStartupEntry(res.paths, entryParam);
+        if (typeof entry === "string") {
+            Module._startupXp3Path = entry;
+            startGame();
+        } else if (Array.isArray(entry) && entry.length > 1) {
+            showXp3Selector(entry, "", function(selected) {
+                Module._startupXp3Path = selected;
+                startGame();
+            });
+        } else {
+            if (res.paths.length > 0) Module._startupXp3Path = res.paths[0];
+            startGame();
+        }
+    } catch (e) {
+        console.error("fetchAndExtractZip error:", e);
+        reportLoadError(e);
+    }
+}
+
+async function autoSelectSpace() {
+    if (!hasFileSystemAPI) {
+        var lastSpace = localStorage.getItem("krkr2-last-space");
+        lastSpace && (Module._saveSpaceId = lastSpace, await idbOpen(lastSpace));
+    }
+}
+
+async function enumerateDir(dirHandle, dirPath) {
+    var list = [];
+    for await (var item of dirHandle.values()) {
+        var full = dirPath + "/" + item.name;
+        "directory" === item.kind ? (list = list.concat(await enumerateDir(item, full))) : list.push({ path: full, handle: item });
+    }
+    return list;
+}
+
+async function handleDirectoryAPI() {
+    try {
+        hostDirHandle = await window.showDirectoryPicker({ mode: "readwrite" });
+    } catch (e) {
+        return void ("AbortError" !== e.name && (pickerStatus.textContent = "Error: " + e.message));
+    }
+    try {
+        setPickerProgress(0, "Scanning directory...");
+        await vlfsReady;
+        var rootName = "/" + hostDirHandle.name;
+        var items = await enumerateDir(hostDirHandle, rootName);
+        var total = items.length;
+        if (0 === total) {
+            pickerStatus.textContent = "Directory is empty.";
+            pickerProgress.classList.remove("visible");
+            hostDirHandle = null;
+            return;
+        }
+        Module._hostDirHandle = hostDirHandle;
+        Module._hostDirPrefix = rootName;
+        var allPaths = [];
+        for (var i = 0; i < total; i++) {
+            var item = items[i];
+            var relPath = item.path.substring(rootName.length);
+            setPickerProgress(Math.round(((i + 1) / total) * 100), "Indexing (" + (i + 1) + "/" + total + ") " + relPath.substring(1));
+            await VLFS.registerFSAFileEager(relPath, item.handle);
+            allPaths.push(relPath);
+        }
+        setPickerProgress(100, "Starting...");
+        checkAndStartGame(allPaths, "");
+    } catch (e) {
+        pickerStatus.textContent = "Error: " + e.message;
+        pickerProgress.classList.remove("visible");
+        hostDirHandle = null;
+    }
+}
+
+async function handleSingleFile(file) {
+    try {
+        setPickerProgress(50, "Indexing " + file.name + "...");
+        await vlfsReady;
+        var filePath = "/" + file.name;
+        VLFS.registerBlobFile(filePath, file);
+        Module._startupXp3Path = filePath;
+        setPickerProgress(100, "Starting...");
+        startGame();
+    } catch (e) {
+        pickerStatus.textContent = "Error: " + e.message;
+        pickerProgress.classList.remove("visible");
+    }
+}
+
+async function handleZipFile(file) {
+    try {
+        setPickerProgress(10, "Indexing " + file.name + "...");
+        await vlfsReady;
+        var res = await VLFS.registerZipBlob(file, {
+            onProgress: function(curr, total, name) {
+                setPickerProgress(10 + Math.round((curr / total) * 90), "Extracting (" + curr + "/" + total + ") " + name.substring(1));
+            }
+        });
+        console.log("[vlfs] local zip registered: " + res.paths.length + " entries");
+        setPickerProgress(100, "Starting...");
+        checkAndStartGame(res.paths, "");
+    } catch (e) {
+        pickerStatus.textContent = "Error: " + e.message;
+        pickerProgress.classList.remove("visible");
+        console.error("handleZipFile error:", e);
+    }
+}
+
+async function handleFolder(files) {
+    var total = files.length;
+    try {
+        await vlfsReady;
+        var allPaths = [];
+        var prefix = "/" + files[0].webkitRelativePath.split("/")[0];
+        for (var i = 0; i < total; i++) {
+            var file = files[i];
+            var relPath = ("/" + file.webkitRelativePath).substring(prefix.length);
+            setPickerProgress(Math.round(((i + 1) / total) * 100), "Indexing (" + (i + 1) + "/" + total + ") " + file.name);
+            VLFS.registerBlobFile(relPath, file);
+            allPaths.push(relPath);
+        }
+        setPickerProgress(100, "Starting...");
+        checkAndStartGame(allPaths, "");
+    } catch (e) {
+        pickerStatus.textContent = "Error: " + e.message;
+        pickerProgress.classList.remove("visible");
+    }
+}
+document.getElementById("space-create-btn").addEventListener("click",(function(){var e=document.getElementById("space-name-input"),t=e.value.trim();t&&(e.value="",selectSpace(t))})),document.getElementById("space-name-input").addEventListener("keydown",(function(e){"Enter"===e.key&&document.getElementById("space-create-btn").click()})),document.getElementById("space-skip-btn").addEventListener("click",(function(){if(Module._saveSpaceId=null,spaceChosen=!0,saveSpacePicker.classList.remove("visible"),filePicker.classList.add("visible"),pendingNonFsaAction){var e=pendingNonFsaAction;pendingNonFsaAction=null,e()}})),document.getElementById("space-import-btn").addEventListener("click",(function(){document.getElementById("space-import-input").click()})),document.getElementById("space-import-input").addEventListener("change",(function(e){var t=e.target.files[0];t&&(e.target.value="",spaceStatus.textContent="Importing...",idbImportZip(t).then((function(e){spaceStatus.textContent='Imported "'+e+'"',refreshSpaceList()})).catch((function(e){spaceStatus.textContent="Import failed: "+e.message})))})),gameZipUrl?autoSelectSpace().then((function(){fetchAndExtractZip(gameZipUrl,entryXp3)})):xp3Url&&autoSelectSpace().then((function(){fetchXp3FromUrl(xp3Url)})),document.getElementById("pick-dir-api-btn").addEventListener("click",handleDirectoryAPI),document.getElementById("pick-file-btn").addEventListener("click",(function(){ensureSpaceThen((function(){document.getElementById("file-input").click()}))})),document.getElementById("pick-dir-btn").addEventListener("click",(function(){ensureSpaceThen((function(){document.getElementById("dir-input").click()}))})),document.getElementById("pick-zip-btn").addEventListener("click",(function(){ensureSpaceThen((function(){document.getElementById("zip-input").click()}))})),document.getElementById("file-input").addEventListener("change",(function(e){var t=e.target.files[0];t&&handleSingleFile(t),e.target.value=""})),document.getElementById("dir-input").addEventListener("change",(function(e){var t=Array.from(e.target.files);t.length>0&&handleFolder(t),e.target.value=""})),document.getElementById("zip-input").addEventListener("change",(function(e){var t=e.target.files[0];t&&handleZipFile(t),e.target.value=""}))</script>
+<script>
+// Load error reporting + save spaces link
+function showUrlMessage(msg, isError) {
+    pickerStatus.classList.toggle("error", !!isError);
+    pickerStatus.textContent = msg;
+}
+
+function reportLoadError(e) {
+    var msg = (e && e.message) ? e.message : String(e);
+    if (e instanceof TypeError) {
+        msg = "Network or CORS error (" + msg + "). The server must allow cross-origin requests (CORS) for remote loading to work.";
+    } else if (/^HTTP \d+/.test(msg)) {
+        msg = msg + ". Check that the URL is correct and the file exists.";
+    } else if (/zip/i.test(msg)) {
+        msg = "Archive error: " + msg;
+    }
+    console.error("[load]", e);
+    loadingOverlay.classList.add("hidden");
+    filePicker.classList.add("visible");
+    pickerProgress.classList.remove("visible");
+    progressFill.style.width = "0%";
+    showUrlMessage("Load failed: " + msg, true);
+}
+
+var saveSpaceLink = document.getElementById("save-space-link");
+if (saveSpaceLink) saveSpaceLink.addEventListener("click", function (e) {
+    e.preventDefault();
+    showSpacePicker();
+});
+</script>
+<script>"serviceWorker"in navigator&&window.addEventListener("load",(function(){navigator.serviceWorker.register("./sw.js",{scope:"./"}).then((function(e){function n(e){confirm("A new version of Kirikiroid2 Web is available. Reload to update?")&&e.postMessage("skipWaiting")}setInterval((function(){e.update()}),18e5),e.waiting&&n(e.waiting),e.addEventListener("updatefound",(function(){var i=e.installing;i.addEventListener("statechange",(function(){"installed"===i.state&&navigator.serviceWorker.controller&&n(i)}))}))})).catch((function(e){console.warn("[PWA] service worker registration failed:",e)}));/* controllerchange handled during bootstrapper */}))</script>
+<script>
+(function() {
+  var fsBtn = document.getElementById("fullscreen-btn");
+  if (!fsBtn) return;
+
+  var isStandalone = window.matchMedia("(display-mode: standalone)").matches || (window.navigator && window.navigator.standalone === true);
+  var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+  if (isStandalone) {
+    fsBtn.style.display = "none";
+    return;
+  }
+
+  function isNativeFullscreen() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+  }
+
+  function updateIconState() {
+    var active = isIOS ? document.body.classList.contains("ios-fake-fullscreen") : isNativeFullscreen();
+    if (active) {
+      fsBtn.classList.add("is-fullscreen");
+      fsBtn.setAttribute("title", "Exit Fullscreen");
+      fsBtn.setAttribute("aria-label", "Exit Fullscreen");
+    } else {
+      fsBtn.classList.remove("is-fullscreen");
+      fsBtn.setAttribute("title", "Enter Fullscreen");
+      fsBtn.setAttribute("aria-label", "Enter Fullscreen");
+    }
+  }
+
+  function toggleFullscreen() {
+    if (isIOS) {
+      var isFake = document.body.classList.toggle("ios-fake-fullscreen");
+      if (isFake) {
+        window.scrollTo(0, 1);
+      }
+      updateIconState();
+      return;
+    }
+
+    if (!isNativeFullscreen()) {
+      var target = document.getElementById("container") || document.documentElement;
+      var req = target.requestFullscreen || target.webkitRequestFullscreen || target.mozRequestFullScreen || target.msRequestFullscreen;
+      if (req) {
+        req.call(target).then(updateIconState).catch(function(err) {
+          console.warn("[fullscreen] request error:", err);
+        });
+      }
+    } else {
+      var exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+      if (exit) {
+        exit.call(document).then(updateIconState).catch(function(err) {
+          console.warn("[fullscreen] exit error:", err);
+        });
+      }
+    }
+  }
+
+  fsBtn.addEventListener("click", function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleFullscreen();
+  });
+
+  ["fullscreenchange", "webkitfullscreenchange", "mozfullscreenchange", "MSFullscreenChange"].forEach(function(evt) {
+    document.addEventListener(evt, updateIconState);
+  });
+
+  var idleTimer = null;
+  function resetInactivity() {
+    fsBtn.classList.remove("idle");
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(function() {
+      if (!fsBtn.matches(":hover") && !fsBtn.matches(":focus") && !fsBtn.matches(":focus-within")) {
+        fsBtn.classList.add("idle");
+      }
+    }, 3500);
+  }
+
+  ["pointermove", "touchstart", "mousemove", "click", "keydown"].forEach(function(evt) {
+    window.addEventListener(evt, resetInactivity, { passive: true });
+  });
+
+  updateIconState();
+  resetInactivity();
+})();
+</script>
+<script src=index.js async></script></body></html>

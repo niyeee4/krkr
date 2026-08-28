@@ -1,0 +1,22 @@
+# Ignore game archives and large data files (never commit games to repo)
+KaranoShoujo.zip
+KaranoShoujo/
+*.xp3
+*.iso
+*.rar
+*.7z
+game/
+games/
+data/
+
+# Preserve engine UI assets zip only
+!assets.zip
+
+# OS / Tool artifacts
+.DS_Store
+Thumbs.db
+.cache/
+.emsdk/
+.vcpkg/
+out/
+geminipj/
