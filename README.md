@@ -1,1 +1,1 @@
-https://niyeee4.github.io/krkr/
+https://niyeee4.github.io/kirikiroid2-web/

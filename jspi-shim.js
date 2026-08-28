@@ -19,7 +19,21 @@
     return;
   }
 
-  var STACK_SLOT_MAIN = 1024 * 1024;    // 1 MB for main instance (sufficient for deep VN async call stacks)
+  function defProp(obj, prop, value) {
+    if (!obj) return;
+    try {
+      Object.defineProperty(obj, prop, {
+        value: value,
+        writable: true,
+        configurable: true,
+        enumerable: false
+      });
+    } catch (e) {
+      try { obj[prop] = value; } catch (e2) {}
+    }
+  }
+
+  var STACK_SLOT_MAIN = 1024 * 1024;    // 1 MB for main instance
   var STACK_SLOT_WORKER = 512 * 1024;   // 512 KB per worker instance
 
   function State(imports, isWorker) {
@@ -158,8 +172,9 @@
   };
 
   State.prototype.wrapImportFn = function (raw) {
+    if (typeof raw !== 'function' || raw.__isWrappedImport) return raw;
     var self = this;
-    return function () {
+    var wrapped = function () {
       var s = self.getState();
       if (s === 2) {
         self.stopRewind();
@@ -173,9 +188,13 @@
       }
       return r;
     };
+    wrapped.__isWrappedImport = true;
+    wrapped.isAsync = raw.isAsync;
+    return wrapped;
   };
 
   State.prototype.wrapExportFn = function (raw) {
+    if (typeof raw !== 'function') return raw;
     var cached = this.exportCache.get(raw);
     if (cached) return cached;
     var self = this;
@@ -265,10 +284,10 @@
 
   function makeInstance(realInstance, state) {
     var wrapped = Object.create(REAL.Instance ? REAL.Instance.prototype : Object.prototype);
-    wrapped.exports = wrapExportsObj(realInstance.exports, state);
+    defProp(wrapped, 'exports', wrapExportsObj(realInstance.exports, state));
     instanceRegistry.set(wrapped, realInstance);
     state.exports = realInstance.exports;
-    state.allocStack();
+    // Note: Do NOT call state.allocStack() here to avoid calling malloc before runtime ctors/TLS init
     return wrapped;
   }
 
@@ -279,14 +298,14 @@
     W.__jspiState = state;
   }
 
-  W.WebAssembly.Suspending = function (f) {
+  function Suspending(f) {
     if (typeof f === 'function') {
       f.isAsync = true;
     }
     return f;
-  };
+  }
 
-  W.WebAssembly.promising = function (f) {
+  function promising(f) {
     if (typeof f !== 'function') return f;
     if (currentState) {
       try { return currentState.wrapExportFn(f); } catch (e) {}
@@ -298,28 +317,26 @@
       }
       return f.apply(this, arguments);
     };
-  };
+  }
 
-  W.WebAssembly.Instance = function (module, imports) {
+  function Instance(module, imports) {
     var state = new State(imports, typeof WorkerGlobalScope !== 'undefined' || !!(W.ENVIRONMENT_IS_WORKER));
     attachState(state);
     var wrappedImports = wrapImportsObj(imports, state);
     var real = new REAL.Instance(module, wrappedImports);
     return makeInstance(real, state);
-  };
+  }
 
   try {
     if (REAL.Instance && REAL.Instance.prototype) {
-      W.WebAssembly.Instance.prototype = Object.create(REAL.Instance.prototype);
-      W.WebAssembly.Instance.prototype.constructor = W.WebAssembly.Instance;
+      Instance.prototype = Object.create(REAL.Instance.prototype);
+      defProp(Instance.prototype, 'constructor', Instance);
     }
   } catch (e) {
     console.warn('[jspi-shim] Instance prototype warning:', e);
   }
-  W.WebAssembly.Instance.OriginalInstance = REAL.Instance;
-  W.WebAssembly.OriginalInstance = REAL.Instance;
 
-  W.WebAssembly.instantiate = function (arg, imports) {
+  function instantiate(arg, imports) {
     var state = new State(imports, typeof WorkerGlobalScope !== 'undefined' || !!(W.ENVIRONMENT_IS_WORKER));
     attachState(state);
     var wrappedImports = wrapImportsObj(imports, state);
@@ -333,9 +350,9 @@
       }
       return result;
     });
-  };
+  }
 
-  W.WebAssembly.instantiateStreaming = function (arg, imports) {
+  function instantiateStreaming(arg, imports) {
     var state = new State(imports, typeof WorkerGlobalScope !== 'undefined' || !!(W.ENVIRONMENT_IS_WORKER));
     attachState(state);
     var wrappedImports = wrapImportsObj(imports, state);
@@ -350,17 +367,27 @@
         return Promise.resolve(arg).then(function (res) {
           return res instanceof Response ? res.arrayBuffer() : res;
         }).then(function (bytes) {
-          return W.WebAssembly.instantiate(bytes, imports);
+          return instantiate(bytes, imports);
         });
       });
     } else {
       return Promise.resolve(arg).then(function (res) {
         return res instanceof Response ? res.arrayBuffer() : res;
       }).then(function (bytes) {
-        return W.WebAssembly.instantiate(bytes, imports);
+        return instantiate(bytes, imports);
       });
     }
-  };
+  }
+
+  if (W.WebAssembly) {
+    defProp(W.WebAssembly, 'Suspending', Suspending);
+    defProp(W.WebAssembly, 'promising', promising);
+    defProp(W.WebAssembly, 'Instance', Instance);
+    defProp(W.WebAssembly, 'instantiate', instantiate);
+    defProp(W.WebAssembly, 'instantiateStreaming', instantiateStreaming);
+    defProp(W.WebAssembly, 'OriginalInstance', REAL.Instance);
+    defProp(Instance, 'OriginalInstance', REAL.Instance);
+  }
 
   W.__jspiShimLoaded = true;
 })();
