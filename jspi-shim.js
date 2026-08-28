@@ -39,8 +39,9 @@
     }
   }
 
-  var STACK_SLOT_MAIN = 1024 * 1024;    // 1 MB for main instance
-  var STACK_SLOT_WORKER = 512 * 1024;   // 512 KB per worker instance
+  var STACK_SLOT_MAIN = 2 * 1024 * 1024;    // 2 MB for main thread
+  var STACK_SLOT_WORKER = 512 * 1024;       // 512 KB per worker thread
+  var FIXED_COUNTER_ADDR = 1024 * 65536 - 8; // Static atomic counter in initial 64MB memory
 
   function State(imports, isWorker) {
     this.value = undefined;
@@ -82,59 +83,46 @@
   };
 
   State.prototype.ensureStack = function () {
-    if (this.stackPtr !== 0) return this.stackPtr;
-    return this.allocStack();
+    var memory = this.getMemory();
+    if (!memory || !memory.buffer) return 0;
+    if (this.stackPtr === 0 || this.buffer !== memory.buffer) {
+      return this.allocStack();
+    }
+    return this.stackPtr;
   };
 
   State.prototype.allocStack = function () {
-    if (this.stackPtr !== 0) return this.stackPtr;
     var memory = this.getMemory();
-    if (!memory) return 0;
+    if (!memory || !memory.buffer) return 0;
 
     var slotSize = this.isWorker ? STACK_SLOT_WORKER : STACK_SLOT_MAIN;
     var totalSize = slotSize + 32;
-    var ptr = 0;
 
-    // 1. Prefer dynamic heap allocation via Emscripten malloc or memalign
-    if (this.exports) {
-      if (typeof this.exports.malloc === 'function') {
-        try { ptr = this.exports.malloc(totalSize); } catch (e) { ptr = 0; }
-      }
-      if (!ptr && typeof this.exports.emscripten_builtin_memalign === 'function') {
-        try { ptr = this.exports.emscripten_builtin_memalign(16, totalSize); } catch (e) { ptr = 0; }
-      }
-      if (!ptr && typeof this.exports._emscripten_stack_alloc === 'function') {
-        try { ptr = this.exports._emscripten_stack_alloc(totalSize); } catch (e) { ptr = 0; }
-      }
-    }
-
-    // 2. If malloc is not available or returned 0, grow memory safely
-    if (!ptr && memory.buffer) {
-      try {
-        var neededPages = Math.ceil(totalSize / 65536);
-        var oldPages = memory.grow(neededPages);
-        if (oldPages !== -1 && oldPages !== undefined) {
-          ptr = oldPages * 65536;
-        }
-      } catch (e) {
-        ptr = 0;
-      }
-    }
-
-    // 3. Fallback: place in upper safe region of current memory buffer
-    if (!ptr && memory.buffer) {
+    // 1. Thread-unique slot allocation (once per thread)
+    if (this.stackPtr === 0) {
       var curBytes = memory.buffer.byteLength;
-      if (curBytes >= totalSize + 64) {
-        ptr = (curBytes - totalSize - 16) & ~7;
+      var counterIndex = FIXED_COUNTER_ADDR >> 2;
+      try {
+        if (curBytes > FIXED_COUNTER_ADDR) {
+          var counterView = new Int32Array(memory.buffer);
+          var offset = Atomics.add(counterView, counterIndex, totalSize);
+          var ptr = FIXED_COUNTER_ADDR - 64 - (offset + totalSize);
+          if (ptr > 1024 * 1024) {
+            this.stackPtr = ptr & ~7;
+          }
+        }
+      } catch (e) {}
+
+      if (!this.stackPtr && this.exports && typeof this.exports.malloc === 'function') {
+        try { this.stackPtr = this.exports.malloc(totalSize); } catch (e) {}
+      }
+      if (!this.stackPtr) {
+        this.stackPtr = (curBytes - (this.isWorker ? 4 * 1024 * 1024 : 2 * 1024 * 1024)) & ~7;
       }
     }
 
-    if (!ptr) {
-      console.warn('[jspi-shim] Unable to allocate stack at this time; will retry on first async yield');
-      return 0;
-    }
-
-    var alignedPtr = (ptr + 7) & ~7;
+    // 2. ALWAYS write Asyncify stack header into current memory.buffer
+    var alignedPtr = (this.stackPtr + 7) & ~7;
     var stackStart = alignedPtr + 8;
     var stackEnd = alignedPtr + 8 + slotSize;
 
@@ -142,13 +130,12 @@
       var headerView = new Int32Array(memory.buffer, alignedPtr, 2);
       headerView[0] = stackStart;
       headerView[1] = stackEnd;
+      this.buffer = memory.buffer;
     } catch (e) {
       console.warn('[jspi-shim] Error writing asyncify stack header:', e);
     }
 
-    this.stackPtr = alignedPtr;
-    this.buffer = memory.buffer;
-    return this.stackPtr;
+    return alignedPtr;
   };
 
   State.prototype.startUnwind = function (promise) {
