@@ -43,6 +43,7 @@
     this.exportCache = new WeakMap();
     this.pendingCalls = [];
     this.suspended = false;
+    this.draining = false;
     this.buffer = null;
     this.stackPtr = 0;
 
@@ -217,7 +218,6 @@
             self.suspended = false;
           }
           self.assertNoneState();
-          self.drainPending();
           self.startRewind();
           continue;
         }
@@ -230,20 +230,23 @@
   };
 
   State.prototype.drainPending = function () {
-    while (this.pendingCalls.length) {
-      var items = this.pendingCalls;
-      this.pendingCalls = [];
-      for (var i = 0; i < items.length; i++) {
-        var item = items[i];
-        var fn = this.wrapExportFn(item.fn);
-        try {
-          var res = fn.apply(item.self, item.args);
-          item.resolve(res);
-        } catch (e) {
-          if (item.reject) item.reject(e);
-          else item.resolve(Promise.reject(e));
+    if (this.draining) return;
+    this.draining = true;
+    try {
+      while (this.pendingCalls.length > 0 && !this.suspended && this.getState() === 0) {
+        var item = this.pendingCalls.shift();
+        if (item) {
+          var fn = this.wrapExportFn(item.fn);
+          try {
+            var res = fn.apply(item.self, item.args);
+            item.resolve(res);
+          } catch (e) {
+            item.reject ? item.reject(e) : item.resolve(Promise.reject(e));
+          }
         }
       }
+    } finally {
+      this.draining = false;
     }
   };
 
@@ -266,28 +269,13 @@
     return out;
   }
 
-  function wrapExportsObj(exports, state) {
-    if (!exports) return exports;
-    var out = {};
-    for (var name in exports) {
-      var f = exports[name];
-      if (typeof f === 'function' && name.indexOf('asyncify_') !== 0) {
-        out[name] = state.wrapExportFn(f);
-      } else {
-        out[name] = f;
-      }
-    }
-    return out;
-  }
-
   var instanceRegistry = new WeakMap();
 
   function makeInstance(realInstance, state) {
     var wrapped = Object.create(REAL.Instance ? REAL.Instance.prototype : Object.prototype);
-    defProp(wrapped, 'exports', wrapExportsObj(realInstance.exports, state));
+    defProp(wrapped, 'exports', realInstance.exports);
     instanceRegistry.set(wrapped, realInstance);
     state.exports = realInstance.exports;
-    // Note: Do NOT call state.allocStack() here to avoid calling malloc before runtime ctors/TLS init
     return wrapped;
   }
 

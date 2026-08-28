@@ -1,7 +1,7 @@
 /* KrKr2 Web — Cross-Origin Isolated Service Worker with precaching.
  * Enables SharedArrayBuffer on GitHub Pages and static hosts without server-side header support.
  */
-var CACHE_VERSION = '20260828000003';
+var CACHE_VERSION = '20260828000004';
 if (CACHE_VERSION.charAt(0) === '@') CACHE_VERSION = 'dev-20260828-2';
 var CACHE_NAME = 'krkr2-v' + CACHE_VERSION;
 
